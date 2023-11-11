@@ -8,29 +8,14 @@ from collections import Counter
 import argparse
 
 all_names1 = [
-    'AG_NEWS', # 'AGNews'
-
-    'DBpedia',
-    'YahooAnswers',
-    '20News',
-    
-    'ohsumed', # 'Ohsumed'
-    'R8',
-    'R52',
-]
-
-all_names2 = [
-    'filipino',
-    'kirnews',
-    'kinnews',
-    'swahili',
-    'SogouNews',
+    'Devign',
+    'BigCloneBench'
 ]
 
 
 def top_votes(counter):
     """
-    Given a Counter object, return a list 
+    Given a Counter object, return a list
     of keys with the highest value.
     So, output len 1: no ties.
     output len > 1: these classes all tie.
@@ -70,11 +55,11 @@ def main():
                         )
 
     args = parser.parse_args()
-    
+
     ks_str = args.k
 
     acc_fmt = "%.3f"
-    
+
     ks = list(map(int,ks_str.split(",")))
 
     k2i = dict([(k,i) for (i,k) in enumerate(ks)])
@@ -83,10 +68,9 @@ def main():
     kmax = max(ks)
 
     results = []
-    
+
     for names in (
             all_names1,
-            all_names2,
     ):
 
         summary = []
@@ -94,12 +78,12 @@ def main():
 
             f1 = os.path.join(args.dir_nn,  name+".pkl")
             f2 = os.path.join(args.dir_data,name+".pkl")
-            
+
             nn = pickle.load(open(f1,'rb'))
             ds = pickle.load(open(f2,'rb'))
             ref = ds['test_labels']
-
-            top_labels = ds['train_labels'][nn]
+            print(nn)
+            top_labels = ds['train_labels'][nn["args"]]
             n_test = len(ref)
 
             top2_correct = np.zeros((n_test,), 'bool')
@@ -113,21 +97,21 @@ def main():
             # 'rand' tie-breaking strategy
             #
             correct_rand = np.zeros((n_test,len(ks)),'float64')
-            
+
             for i in range(n_test):
                 refi = ref[i] # int
                 hypi = top_labels[i] # [int]
-                
+
                 top2_correct[i] = (refi in hypi[:2])
 
                 # count up from k=0,...,
                 # accumulate in Counter, 'votes'.
-            
+
                 votes = Counter()
 
                 for ki in range(kmax):
                     k = ki + 1
-                    
+
                     votes[hypi[ki]] += 1
 
                     tv = top_votes(votes)
@@ -146,7 +130,7 @@ def main():
                             # gives 1/c correct.
                             # (eg if len(tv)==1, 1/1=1.0, always right)
                             correct_rand[i][j] = 1.0 / len(tv)
-                        
+
                         else:
                             # not in the tie-set: always wrong:
                             correct_rand[i][j] = 0.0
@@ -166,7 +150,7 @@ def main():
                         acc_fmt % acc_rand,
                     ])
 
-            hyp = ds['train_labels'][nn[:,0]]
+            hyp = ds['train_labels'][nn["args"][:,0]]
             acc = (hyp==ref).mean()
 
             summary.append({
@@ -184,7 +168,7 @@ def main():
             ['knn1'] + [ (acc_fmt % a['knn1']) for a in summary],
             ['top2'] + [ (acc_fmt % a['top2']) for a in summary],
         ]
-            
+
         print("")
         print(tabulate(
             rows,
@@ -203,6 +187,6 @@ def main():
                      'rand'],
             disable_numparse=True))
         print("")
-        
+
 if __name__ == "__main__":
     main()
